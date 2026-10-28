@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>도서관 대출</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<style>
+:root {
+  --bg: #FAF9F5; --bg2: #F0EEE6; --paper: #FFFEFB; --ink: #141413; --ink2: #3D3D3A; --muted: #75736B; --faint: #A8A59A;
+  --line: #E4E0D4; --line2: #D6D1C2; --clay: #D97757; --clay-ink: #B5583A; --clay-soft: #F3DFD3; --olive: #5F7A47; --olive-soft: #E3E9D9;
+  --serif: "Noto Serif KR", Georgia, serif;
+  --sans: "Pretendard Variable", Pretendard, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --r: 14px; --gap: 16px;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.6 var(--sans); -webkit-font-smoothing: antialiased; word-break: keep-all; font-variant-numeric: tabular-nums; }
+button, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; }
+main { max-width: 1120px; margin: 0 auto; padding: 40px 32px 56px; }
+
+.hero { background: var(--paper); border: 1px solid var(--line); border-radius: 20px; padding: 32px; margin-bottom: var(--gap); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 32px; align-items: end; }
+.brand { display: flex; gap: 10px; align-items: center; color: var(--muted); font-size: 13px; margin-bottom: 18px; }
+h1 { font-family: var(--serif); font-weight: 500; font-size: clamp(30px, 3.4vw, 42px); line-height: 1.15; letter-spacing: -.025em; margin: 0; }
+.lede { font-size: 16px; color: var(--ink2); margin: 14px 0 0; max-width: 30em; }
+.sub { color: var(--ink2); margin: 10px 0 0; font-size: 14px; }
+.sub b { color: var(--clay-ink); font-weight: 600; }
+.status.err { color: var(--clay-ink); }
+
+/* 서가 */
+.shelf { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; align-items: end; padding: 0 4px 10px; border-bottom: 6px solid var(--line2); border-radius: 0 0 4px 4px; }
+.book { height: 150px; border-radius: 6px 6px 3px 3px; padding: 12px 8px; display: flex; flex-direction: column; justify-content: space-between; background: var(--olive-soft); border: 1px solid #cdd8bf; transition: background .2s, height .25s; min-width: 0; }
+.book:nth-child(2) { height: 136px; } .book:nth-child(4) { height: 142px; }
+.book b { font-family: var(--serif); font-size: 15px; font-weight: 600; letter-spacing: .02em; }
+.book small { font-size: 12px; line-height: 1.35; color: #33461f; overflow-wrap: anywhere; }
+.book.out { background: var(--clay-soft); border-color: #e6c3b0; }
+.book.out small { color: #8f3216; }
+
+.rules { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 18px 0 0; padding: 0; list-style: none; color: var(--muted); font-size: 13px; }
+.rules li::before { content: "·"; margin-right: 6px; color: var(--clay); font-weight: 700; }
+
+.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gap); align-items: start; }
+.card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--r); padding: 24px; }
+.card h2 { font-family: var(--serif); font-size: 20px; font-weight: 600; letter-spacing: -.015em; margin: 0 0 4px; }
+.card .hint { color: var(--muted); margin: 0 0 18px; font-size: 13px; }
+
+form { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 12px; }
+form .wide { grid-column: 1 / -1; }
+label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: var(--ink2); }
+input { width: 100%; min-width: 0; height: 42px; border: 1px solid var(--line2); border-radius: 10px; padding: 0 12px; background: var(--bg); font-weight: 400; font-size: 15px; transition: border-color .15s, background .15s; }
+input::placeholder { color: var(--faint); }
+input:hover { border-color: var(--faint); }
+input:focus { outline: none; border-color: var(--ink); background: var(--paper); }
+.btn { height: 42px; padding: 0 20px; border: 0; border-radius: 10px; background: var(--ink); color: var(--bg); font-weight: 600; font-size: 14px; cursor: pointer; transition: background .15s, transform .1s; }
+.btn:hover { background: #2b2b29; } .btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: .35; cursor: wait; }
+.btn.ghost { background: var(--paper); color: var(--ink); border: 1px solid var(--line2); }
+.btn.ghost:hover { border-color: var(--ink); }
+
+.result { margin-top: 16px; border-radius: 12px; padding: 14px 16px; display: none; font-size: 14px; animation: in .25s ease-out; }
+.result.show { display: block; }
+.result strong { display: block; font-family: var(--serif); font-size: 28px; font-weight: 600; line-height: 1.2; margin-bottom: 2px; }
+.result.ok { background: var(--olive-soft); color: #33461f; }
+.result.fail { background: var(--clay-soft); color: #8f3216; border-left: 4px solid var(--clay-ink); }
+@keyframes in { from { opacity: 0; transform: translateY(6px); } }
+
+table { width: 100%; border-collapse: collapse; margin-top: 18px; }
+th { text-align: left; font-weight: 600; color: var(--muted); font-size: 13px; padding: 8px 0; border-bottom: 1px solid var(--line2); }
+td { padding: 12px 0; border-bottom: 1px solid var(--line); }
+th.num, td.num { text-align: right; }
+.empty { color: var(--muted); margin: 16px 0 0; }
+
+@media (max-width: 960px) { .grid { grid-template-columns: 1fr 1fr; } #list { grid-column: 1 / -1; } .hero { grid-template-columns: 1fr; } }
+@media (max-width: 640px) {
+  main { padding: 20px 16px 40px; }
+  .hero { padding: 20px; border-radius: 16px; gap: 22px; }
+  .grid { grid-template-columns: 1fr; }
+  .card { padding: 20px; }
+  .shelf { gap: 6px; } .book { height: 118px; padding: 10px 6px; } .book:nth-child(2) { height: 106px; } .book:nth-child(4) { height: 112px; }
+  .book b { font-size: 13px; } .book small { font-size: 11px; }
+}
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<main>
+  <header class="hero">
+    <div>
+      <div class="brand">
+        <svg width="26" height="26" viewBox="0 0 30 30" aria-hidden="true">
+          <rect x="1" y="1" width="28" height="28" rx="6" fill="#141413"/>
+          <rect x="7" y="8" width="4" height="15" rx="1" fill="#fff" opacity=".35"/>
+          <rect x="13" y="11" width="4" height="12" rx="1" fill="#D97757"/>
+          <rect x="19" y="7" width="4" height="16" rx="1" transform="rotate(8 21 15)" fill="#fff" opacity=".35"/>
+        </svg>
+        작은 도서관 · 대출 데스크
+      </div>
+      <h1>도서관 대출</h1>
+      <p class="lede">책 번호와 이름, 오늘이 문을 연 지 며칠째인지 입력해 빌리고 반납하세요.</p>
+      <p class="sub" id="summary">대출 엔진(solution.py)을 불러오는 중…</p>
+      <ul class="rules">
+        <li>대출 기간 14일</li><li>1인 3권까지</li><li>연체 일수만큼 대출 정지</li>
+      </ul>
+    </div>
+    <div class="shelf" id="shelf" aria-label="서가 현황"></div>
+  </header>
+
+  <div class="grid">
+    <section class="card" id="borrow">
+      <h2>대출</h2>
+      <p class="hint">반납 기한은 빌린 날 + 14일입니다.</p>
+      <form id="borrow-form">
+        <label>책 번호<input name="book" list="books" autocapitalize="characters" placeholder="예: B001"></label>
+        <label>며칠째<input name="day" type="number" step="any" inputmode="numeric" placeholder="예: 1"></label>
+        <label class="wide">이름<input name="name" placeholder="예: 김민수"></label>
+        <div class="wide"><button class="btn" disabled>대출하기</button></div>
+      </form>
+      <div class="result" id="borrow-result" role="status"></div>
+    </section>
+
+    <section class="card" id="return">
+      <h2>반납</h2>
+      <p class="hint">빌린 본인 이름으로만 반납됩니다.</p>
+      <form id="return-form">
+        <label>책 번호<input name="book" list="books" autocapitalize="characters" placeholder="예: B001"></label>
+        <label>며칠째<input name="day" type="number" step="any" inputmode="numeric" placeholder="예: 10"></label>
+        <label class="wide">이름<input name="name" placeholder="예: 김민수"></label>
+        <div class="wide"><button class="btn ghost" disabled>반납하기</button></div>
+      </form>
+      <div class="result" id="return-result" role="status"></div>
+    </section>
+
+    <section class="card" id="list">
+      <h2>대출 목록</h2>
+      <p class="hint">반납 기한이 빠른 순서로 보여 줍니다.</p>
+      <form id="list-form">
+        <label class="wide">이름<input name="name" placeholder="예: 김민수"></label>
+        <div class="wide"><button class="btn" disabled>목록 보기</button></div>
+      </form>
+      <div id="list-out"></div>
+    </section>
+  </div>
+</main>
+<datalist id="books"><option>B001</option><option>B002</option><option>B003</option><option>B004</option><option>B005</option></datalist>
+
+<script>
+// 화면 표시용 목록일 뿐, 대출 규칙 판단은 모두 solution.py 가 함
+const BOOKS = ["B001", "B002", "B003", "B004", "B005"];
+let py, lib;
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+// 빈 칸은 NaN → Python float 로 넘어가 solution.py 가 거절, 2.5 도 float 로 넘어가 거절
+const num = v => v.trim() === "" ? NaN : Number(v);
+const read = f => [f.book.value.trim(), f.name.value.trim(), num(f.day.value)];
+
+function render() {
+  // 서가 표시: solution.py 가 기억하는 대출 기록을 그대로 읽어 옴
+  const p = py.runPython("{b: [n, d + 14] for b, (n, d) in lib.loans.items()}"), loans = p.toJs({ dict_converter: Object.fromEntries }); p.destroy();
+  $("#shelf").innerHTML = BOOKS.map(b => loans[b]
+    ? `<div class="book out"><b>${b}</b><small>${esc(loans[b][0])}<br>${loans[b][1]}일째까지</small></div>`
+    : `<div class="book"><b>${b}</b><small>대출 가능</small></div>`).join("");
+  const out = Object.keys(loans).length;
+  $("#summary").innerHTML = `5권 중 <b>${5 - out}권</b> 대출 가능 · 대출 중 <b>${out}권</b>`;
+}
+
+function show(el, ok, title, detail) {
+  el.className = "result show " + (ok ? "ok" : "fail");
+  el.innerHTML = `<strong>${esc(title)}</strong>${esc(detail)}`;
+}
+
+$("#borrow-form").onsubmit = e => {
+  e.preventDefault();
+  const [book, name, day] = read(e.target);
+  const ok = lib.borrow(book, name, day);
+  show($("#borrow-result"), ok, ok ? "성공" : "실패",
+    ok ? `${book} · ${name} · ${day}일째 대출, ${day + 14}일째까지 반납`
+       : "대출할 수 없습니다. 없는 책, 이미 대출 중, 3권 초과, 기한 지난 책 보유, 대출 정지 기간, 1 이상 정수가 아닌 날짜인지 확인하세요.");
+  render();
+};
+
+$("#return-form").onsubmit = e => {
+  e.preventDefault();
+  const [book, name, day] = read(e.target);
+  const late = lib.return_book(book, name, day);
+  show($("#return-result"), late >= 0, late >= 0 ? `연체 ${late}일` : "실패",
+    late > 0 ? `${book} 반납 완료. ${day}–${day + late - 1}일째에는 대출이 정지됩니다.`
+    : late === 0 ? `${book} 반납 완료. 기한 안에 반납했습니다.`
+    : "반납할 수 없습니다. 이 이름으로 빌린 책인지, 날짜가 1 이상 정수이고 빌린 날 이후인지 확인하세요.");
+  render();
+};
+
+$("#list-form").onsubmit = e => {
+  e.preventDefault();
+  const name = e.target.name.value.trim();
+  const p = lib.get_loans(name), list = p.toJs(); p.destroy();
+  $("#list-out").innerHTML = list.length
+    ? `<table><thead><tr><th>책 번호</th><th class="num">반납 기한</th></tr></thead><tbody>` +
+      list.map(([b, due]) => `<tr><td>${esc(b)}</td><td class="num">${due}일째까지</td></tr>`).join("") + `</tbody></table>`
+    : `<p class="empty">${esc(name || "이 사람")}님이 빌린 책이 없습니다.</p>`;
+};
+
+(async () => {
+  try {
+    py = await loadPyodide();
+    // 웹에 규칙을 따로 만들지 않고 solution.py 를 그대로 실행
+    py.runPython(await (await fetch("solution.py", { cache: "no-store" })).text());
+    py.runPython("lib = LibraryLoan()");
+    lib = py.globals.get("lib");
+    document.querySelectorAll("button[disabled]").forEach(b => b.disabled = false);
+    render();
+  } catch (err) {
+    const s = $("#summary");
+    s.classList.add("status", "err");
+    s.textContent = location.protocol === "file:"
+      ? "파일로 직접 열면 solution.py 를 불러올 수 없습니다. 배포된 링크로 열어 주세요."
+      : "solution.py 를 불러오지 못했습니다: " + err;
+  }
+})();
+</script>
+</body>
+</html>
