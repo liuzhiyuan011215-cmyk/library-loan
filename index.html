@@ -2,10 +2,11 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FAF9F5">
 <title>도서관 대출</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
 <style>
@@ -15,182 +16,410 @@
   --serif: "Noto Serif KR", Georgia, serif;
   --sans: "Pretendard Variable", Pretendard, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
   --r: 14px; --gap: 16px;
+  --ease: cubic-bezier(.2, .8, .2, 1);
 }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.6 var(--sans); -webkit-font-smoothing: antialiased; word-break: keep-all; font-variant-numeric: tabular-nums; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.6 var(--sans); -webkit-font-smoothing: antialiased; word-break: keep-all; font-variant-numeric: tabular-nums; -webkit-tap-highlight-color: transparent; }
 button, input { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; }
-main { max-width: 1120px; margin: 0 auto; padding: 40px 32px 56px; }
+.app { display: grid; grid-template-columns: 252px 1fr; min-height: 100vh; }
 
-.hero { background: var(--paper); border: 1px solid var(--line); border-radius: 20px; padding: 32px; margin-bottom: var(--gap); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 32px; align-items: end; }
-.brand { display: flex; gap: 10px; align-items: center; color: var(--muted); font-size: 13px; margin-bottom: 18px; }
-h1 { font-family: var(--serif); font-weight: 500; font-size: clamp(30px, 3.4vw, 42px); line-height: 1.15; letter-spacing: -.025em; margin: 0; }
+/* ── 사이드바 ── */
+aside { padding: 32px 20px; display: flex; flex-direction: column; gap: 32px; position: sticky; top: 0; height: 100vh; border-right: 1px solid var(--line); }
+.brand { display: flex; gap: 12px; align-items: center; padding: 0 12px; }
+.brand b { display: block; font-size: 15px; font-weight: 600; letter-spacing: -.01em; } .brand small { color: var(--muted); font-size: 12px; }
+.side-nav { display: flex; flex-direction: column; gap: 2px; }
+.side-nav a { display: block; padding: 8px 12px; border-radius: 10px; color: var(--ink2); text-decoration: none; font-size: 14px; transition: background .15s, color .15s; }
+.side-nav a:hover { background: var(--bg2); color: var(--ink); }
+.side-nav a.on { background: var(--bg2); color: var(--ink); font-weight: 600; }
+.rules { margin-top: auto; padding: 16px; background: var(--paper); border: 1px solid var(--line); border-radius: var(--r); color: var(--ink2); font-size: 13px; }
+.rules p { margin: 0 0 4px; } .rules strong { font-family: var(--serif); font-weight: 600; display: block; margin-bottom: 8px; font-size: 15px; color: var(--ink); }
+
+/* ── 본문 ── */
+main { padding: 40px; min-width: 0; max-width: 1280px; }
+.hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 32px; align-items: center; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; padding: 32px; margin-bottom: var(--gap); }
 .lede { font-size: 16px; color: var(--ink2); margin: 14px 0 0; max-width: 30em; }
-.sub { color: var(--ink2); margin: 10px 0 0; font-size: 14px; }
+.hero-img { width: 100%; aspect-ratio: 16 / 8; object-fit: cover; border-radius: 14px; display: block; }
+h1 { font-family: var(--serif); font-weight: 500; font-size: clamp(30px, 3.4vw, 42px); line-height: 1.15; letter-spacing: -.025em; margin: 0; }
+.sub { color: var(--ink2); margin: 12px 0 0; font-size: 15px; }
 .sub b { color: var(--clay-ink); font-weight: 600; }
-.status.err { color: var(--clay-ink); }
+.sub.err { color: var(--clay-ink); }
 
-/* 서가 */
-.shelf { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; align-items: end; padding: 0 4px 10px; border-bottom: 6px solid var(--line2); border-radius: 0 0 4px 4px; }
-.book { height: 150px; border-radius: 6px 6px 3px 3px; padding: 12px 8px; display: flex; flex-direction: column; justify-content: space-between; background: var(--olive-soft); border: 1px solid #cdd8bf; transition: background .2s, height .25s; min-width: 0; }
-.book:nth-child(2) { height: 136px; } .book:nth-child(4) { height: 142px; }
-.book b { font-family: var(--serif); font-size: 15px; font-weight: 600; letter-spacing: .02em; }
-.book small { font-size: 12px; line-height: 1.35; color: #33461f; overflow-wrap: anywhere; }
-.book.out { background: var(--clay-soft); border-color: #e6c3b0; }
-.book.out small { color: #8f3216; }
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) 352px; gap: var(--gap); align-items: stretch; }
+.stack { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; }
+.stack > .card:last-child { flex: 1; } /* 두 열의 아래 끝을 맞춤 */
+.card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--r); padding: 24px; scroll-margin-top: 24px; }
+.card-head { margin-bottom: 18px; }
+.card h2 { font-family: var(--serif); font-size: 20px; font-weight: 600; letter-spacing: -.015em; margin: 0 0 4px; line-height: 1.3; }
+.hint { color: var(--muted); margin: 0; font-size: 13px; }
+.card.flash { animation: flash 1.2s ease-out; }
+@keyframes flash { 0%, 40% { box-shadow: 0 0 0 3px var(--clay); } 100% { box-shadow: 0 0 0 3px transparent; } }
+@keyframes in { from { opacity: 0; transform: translateY(6px); } }
 
-.rules { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 18px 0 0; padding: 0; list-style: none; color: var(--muted); font-size: 13px; }
-.rules li::before { content: "·"; margin-right: 6px; color: var(--clay); font-weight: 700; }
+/* ── 서가 ── */
+.books { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; }
+.bk { display: flex; flex-direction: column; gap: 10px; border: 0; background: none; padding: 0; text-align: left; cursor: pointer; min-width: 0; }
+.bk:disabled { cursor: progress; }
+.cover { position: relative; display: block; aspect-ratio: 3 / 4; border-radius: 4px 10px 10px 4px; overflow: hidden; background: var(--bg2); box-shadow: inset 4px 0 0 rgba(20,20,19,.12), 0 1px 2px rgba(20,20,19,.08), 0 6px 16px -8px rgba(20,20,19,.25); transition: transform .2s var(--ease), box-shadow .2s; }
+.cover img { width: 100%; height: 100%; object-fit: cover; display: block; transition: filter .25s; }
+.bk:not(:disabled):hover .cover { transform: translateY(-3px); box-shadow: inset 4px 0 0 rgba(20,20,19,.12), 0 2px 4px rgba(20,20,19,.08), 0 14px 24px -10px rgba(20,20,19,.3); }
+.bk.out .cover img { filter: grayscale(.55) brightness(.92); }
+.tag { position: absolute; left: 8px; top: 8px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; background: var(--paper); color: var(--olive); }
+.bk.out .tag { background: var(--clay); color: #fff; }
+.meta { min-width: 0; flex: 1; }
+.meta b { display: block; font-size: 14px; font-weight: 600; line-height: 1.3; }
+.meta small { display: block; color: var(--muted); font-size: 12px; line-height: 1.45; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.meta .due { color: var(--clay-ink); font-weight: 600; }
+.chev { display: none; }
 
-.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gap); align-items: start; }
-.card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--r); padding: 24px; }
-.card h2 { font-family: var(--serif); font-size: 20px; font-weight: 600; letter-spacing: -.015em; margin: 0 0 4px; }
-.card .hint { color: var(--muted); margin: 0 0 18px; font-size: 13px; }
-
-form { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 12px; }
-form .wide { grid-column: 1 / -1; }
+/* ── 양식 ── */
+.fields { display: grid; grid-template-columns: 1fr; gap: 14px; }
+.fields .wide { grid-column: 1 / -1; }
 label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: var(--ink2); }
 input { width: 100%; min-width: 0; height: 42px; border: 1px solid var(--line2); border-radius: 10px; padding: 0 12px; background: var(--bg); font-weight: 400; font-size: 15px; transition: border-color .15s, background .15s; }
 input::placeholder { color: var(--faint); }
 input:hover { border-color: var(--faint); }
 input:focus { outline: none; border-color: var(--ink); background: var(--paper); }
+input[readonly] { background: var(--bg2); border-color: var(--bg2); color: var(--ink2); }
 .btn { height: 42px; padding: 0 20px; border: 0; border-radius: 10px; background: var(--ink); color: var(--bg); font-weight: 600; font-size: 14px; cursor: pointer; transition: background .15s, transform .1s; }
-.btn:hover { background: #2b2b29; } .btn:active { transform: translateY(1px); }
-.btn:disabled { opacity: .35; cursor: wait; }
-.btn.ghost { background: var(--paper); color: var(--ink); border: 1px solid var(--line2); }
-.btn.ghost:hover { border-color: var(--ink); }
+.btn:hover { background: #2b2b29; } .btn:active { transform: scale(.98); }
+.btn:disabled { opacity: .35; cursor: progress; }
+.row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: end; max-width: 440px; }
 
 .result { margin-top: 16px; border-radius: 12px; padding: 14px 16px; display: none; font-size: 14px; animation: in .25s ease-out; }
 .result.show { display: block; }
-.result strong { display: block; font-family: var(--serif); font-size: 28px; font-weight: 600; line-height: 1.2; margin-bottom: 2px; }
+.result strong { display: block; font-family: var(--serif); font-size: 26px; font-weight: 600; line-height: 1.2; margin-bottom: 2px; }
 .result.ok { background: var(--olive-soft); color: #33461f; }
 .result.fail { background: var(--clay-soft); color: #8f3216; border-left: 4px solid var(--clay-ink); }
-@keyframes in { from { opacity: 0; transform: translateY(6px); } }
 
+/* ── 대출 목록 ── */
 table { width: 100%; border-collapse: collapse; margin-top: 18px; }
 th { text-align: left; font-weight: 600; color: var(--muted); font-size: 13px; padding: 8px 0; border-bottom: 1px solid var(--line2); }
-td { padding: 12px 0; border-bottom: 1px solid var(--line); }
-th.num, td.num { text-align: right; }
-.empty { color: var(--muted); margin: 16px 0 0; }
+td { padding: 10px 0; border-bottom: 1px solid var(--line); vertical-align: middle; }
+td.num, th.num { text-align: right; white-space: nowrap; }
+td .t { display: flex; align-items: center; gap: 12px; }
+td img { width: 30px; height: 40px; object-fit: cover; border-radius: 2px 5px 5px 2px; flex: none; }
+td small { display: block; color: var(--muted); font-size: 12px; }
+.empty { color: var(--muted); margin: 16px 0 0; font-size: 14px; }
 
-@media (max-width: 960px) { .grid { grid-template-columns: 1fr 1fr; } #list { grid-column: 1 / -1; } .hero { grid-template-columns: 1fr; } }
-@media (max-width: 640px) {
-  main { padding: 20px 16px 40px; }
-  .hero { padding: 20px; border-radius: 16px; gap: 22px; }
-  .grid { grid-template-columns: 1fr; }
-  .card { padding: 20px; }
-  .shelf { gap: 6px; } .book { height: 118px; padding: 10px 6px; } .book:nth-child(2) { height: 106px; } .book:nth-child(4) { height: 112px; }
-  .book b { font-size: 13px; } .book small { font-size: 11px; }
+/* ── 바텀시트 (데스크톱에서는 가운데 대화상자) ── */
+.scrim { position: fixed; inset: 0; background: rgba(20,20,19,.32); opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 30; }
+.scrim.on { opacity: 1; pointer-events: auto; }
+.sheet { position: fixed; z-index: 31; left: 50%; top: 50%; width: min(420px, calc(100vw - 32px)); background: var(--paper); border-radius: 20px; padding: 24px; box-shadow: 0 24px 64px -16px rgba(20,20,19,.35); opacity: 0; pointer-events: none; transform: translate(-50%, -46%) scale(.98); transition: opacity .22s, transform .3s var(--ease); }
+.sheet.on { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%); }
+.grab { display: none; }
+.sheet-head { display: flex; gap: 16px; align-items: flex-start; margin-bottom: 20px; }
+.sheet-head img { width: 64px; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 3px 8px 8px 3px; flex: none; box-shadow: inset 3px 0 0 rgba(20,20,19,.12), 0 6px 14px -8px rgba(20,20,19,.35); }
+.sheet-head > div { flex: 1; min-width: 0; }
+.kicker { font-size: 12px; font-weight: 600; color: var(--olive); }
+.kicker.out { color: var(--clay-ink); }
+.sheet h3 { font-family: var(--serif); font-size: 22px; font-weight: 600; letter-spacing: -.015em; margin: 2px 0 2px; line-height: 1.25; }
+.sheet .note { color: var(--muted); font-size: 13px; margin: 0; }
+.x { width: 32px; height: 32px; flex: none; border: 0; border-radius: 50%; background: var(--bg2); color: var(--ink2); cursor: pointer; display: grid; place-items: center; }
+.sheet .fields { grid-template-columns: 1fr; }
+.sheet .btn { width: 100%; height: 50px; font-size: 16px; border-radius: 12px; }
+.shake { animation: shake .35s; }
+@keyframes shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+
+/* ── 토스트 ── */
+.toast { position: fixed; z-index: 40; left: 50%; top: 20px; transform: translate(-50%, -140%); width: max-content; max-width: calc(100vw - 32px); padding: 12px 20px 12px 16px; border-radius: 16px; background: var(--ink); color: var(--bg); display: flex; gap: 12px; align-items: center; box-shadow: 0 16px 40px -12px rgba(20,20,19,.45); opacity: 0; transition: transform .35s var(--ease), opacity .25s; }
+.toast.on { transform: translate(-50%, 0); opacity: 1; }
+.toast i { width: 28px; height: 28px; border-radius: 50%; background: var(--olive); display: grid; place-items: center; flex: none; font-style: normal; font-weight: 700; }
+.toast b { display: block; font-family: var(--serif); font-size: 18px; line-height: 1.25; }
+.toast small { display: block; font-size: 13px; opacity: .75; }
+
+.tabbar { display: none; }
+
+/* ── 엔진 불러오는 상태: 스크롤 위치와 상관없이 늘 보이게 ── */
+.boot { position: fixed; z-index: 45; left: 50%; top: calc(16px + env(safe-area-inset-top)); transform: translateX(-50%); width: max-content; max-width: calc(100vw - 32px); display: flex; gap: 10px; align-items: center; padding: 10px 16px; border-radius: 999px; background: var(--ink); color: var(--bg); font-size: 13px; font-weight: 500; box-shadow: 0 12px 32px -12px rgba(20,20,19,.45); transition: opacity .3s, transform .3s var(--ease); }
+.boot.done { opacity: 0; transform: translate(-50%, -12px); pointer-events: none; }
+.boot.err { background: var(--clay-ink); border-radius: 14px; }
+.spin { width: 14px; height: 14px; flex: none; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; }
+.boot.err .spin { display: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.broken .btn:disabled, .broken .bk:disabled { cursor: not-allowed; }
+
+@media (max-width: 1100px) {
+  .grid { grid-template-columns: 1fr; } .stack { display: contents; }
+  #shelf { order: 1; } #borrow { order: 2; } #return { order: 3; } #list { order: 4; }
+  .hero { grid-template-columns: 1fr; } .hero-img { order: -1; aspect-ratio: 16 / 7; }
+}
+
+/* ── 휴대폰: 아래 탭 막대로 한 번에 한 화면 ── */
+@media (max-width: 760px) {
+  .app { display: block; }
+  aside { display: none; }
+  main { padding: calc(16px + env(safe-area-inset-top)) 16px calc(190px + env(safe-area-inset-bottom)); }
+  [data-tab]:not(.on) { display: none !important; }
+  .grid { display: block; }
+  .hero { display: block; background: none; border: 0; padding: 4px 0 0; margin: 0 0 28px; }
+  .hero-img { aspect-ratio: 16 / 9; border-radius: 16px; margin-bottom: 20px; }
+  h1, .card h2 { font-family: var(--sans); font-weight: 700; font-size: 32px; letter-spacing: -.03em; line-height: 1.15; }
+  .lede { font-size: 15px; margin-top: 8px; }
+  .card { background: none; border: 0; padding: 0; border-radius: 0; }
+  #shelf .card-head h2 { font-size: 22px; }
+  .card:not(#shelf) { padding-top: 12px; }
+  .card-head { margin-bottom: 20px; }
+  .hint { font-size: 14px; }
+
+  /* 서가: 목록형, 누르면 바텀시트 */
+  .books { grid-template-columns: 1fr; gap: 0; background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: 0 16px; }
+  .bk { flex-direction: row; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .bk:last-child { border-bottom: 0; }
+  .cover { width: 46px; flex: none; } .tag { display: none; }
+  .bk:not(:disabled):hover .cover { transform: none; }
+  .bk:active { opacity: .6; }
+  .meta b { font-size: 16px; } .meta small { font-size: 13px; }
+  .chev { display: block; color: var(--faint); flex: none; }
+
+  /* 양식: 한 줄에 한 칸, 주 버튼은 탭 막대 위에 고정 */
+  .fields { grid-template-columns: 1fr; gap: 16px; }
+  label { font-size: 14px; }
+  input { height: 50px; font-size: 16px; border-radius: 12px; padding: 0 14px; background: var(--paper); }
+  .row { grid-template-columns: 1fr; max-width: none; }
+  .act { position: fixed; z-index: 10; left: 16px; right: 16px; bottom: calc(92px + env(safe-area-inset-bottom)); }
+  .act .btn { width: 100%; height: 52px; font-size: 16px; border-radius: 14px; box-shadow: 0 10px 24px -12px rgba(20,20,19,.5); }
+
+  /* 바텀시트 */
+  .sheet { left: 0; right: 0; top: auto; bottom: 0; width: auto; border-radius: 22px 22px 0 0; padding: 8px 20px calc(20px + env(safe-area-inset-bottom)); opacity: 1; transform: translateY(105%); transition: transform .38s var(--ease); max-height: 90vh; overflow-y: auto; }
+  .sheet.on { transform: translateY(0); }
+  .grab { display: block; width: 36px; height: 5px; border-radius: 3px; background: var(--line2); margin: 0 auto 16px; }
+  .sheet .btn { height: 52px; border-radius: 14px; }
+  .toast { top: calc(12px + env(safe-area-inset-top)); }
+
+  /* 아래 탭 막대 (유리) */
+  .tabbar { display: grid; grid-template-columns: repeat(4, 1fr); position: fixed; z-index: 20; left: 12px; right: 12px; bottom: calc(10px + env(safe-area-inset-bottom)); height: 68px; padding: 6px; border-radius: 34px; background: rgba(255, 254, 251, .72); -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%); border: 1px solid rgba(214, 209, 194, .7); box-shadow: 0 12px 32px -12px rgba(20,20,19,.28); }
+  .tabbar button { border: 0; background: none; border-radius: 28px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: var(--muted); font-size: 11px; font-weight: 600; cursor: pointer; transition: background .2s, color .2s; }
+  .tabbar button svg { width: 24px; height: 24px; }
+  .tabbar button.on { background: rgba(20, 20, 19, .07); color: var(--clay-ink); }
 }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 </head>
 <body>
-<main>
-  <header class="hero">
-    <div>
-      <div class="brand">
-        <svg width="26" height="26" viewBox="0 0 30 30" aria-hidden="true">
-          <rect x="1" y="1" width="28" height="28" rx="6" fill="#141413"/>
-          <rect x="7" y="8" width="4" height="15" rx="1" fill="#fff" opacity=".35"/>
-          <rect x="13" y="11" width="4" height="12" rx="1" fill="#D97757"/>
-          <rect x="19" y="7" width="4" height="16" rx="1" transform="rotate(8 21 15)" fill="#fff" opacity=".35"/>
-        </svg>
-        작은 도서관 · 대출 데스크
-      </div>
-      <h1>도서관 대출</h1>
-      <p class="lede">책 번호와 이름, 오늘이 문을 연 지 며칠째인지 입력해 빌리고 반납하세요.</p>
-      <p class="sub" id="summary">대출 엔진(solution.py)을 불러오는 중…</p>
-      <ul class="rules">
-        <li>대출 기간 14일</li><li>1인 3권까지</li><li>연체 일수만큼 대출 정지</li>
-      </ul>
+<div class="app">
+  <aside>
+    <div class="brand">
+      <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true">
+        <rect x="1" y="1" width="28" height="28" rx="6" fill="#141413"/>
+        <rect x="7" y="8" width="4" height="15" rx="1" fill="#fff" opacity=".35"/>
+        <rect x="13" y="11" width="4" height="12" rx="1" fill="#D97757"/>
+        <rect x="19" y="7" width="4" height="16" rx="1" transform="rotate(8 21 15)" fill="#fff" opacity=".35"/>
+      </svg>
+      <div><b>도서관 대출</b><small>B001 – B005 · 5권</small></div>
     </div>
-    <div class="shelf" id="shelf" aria-label="서가 현황"></div>
-  </header>
+    <nav class="side-nav">
+      <a href="#shelf" class="on">서가 현황</a>
+      <a href="#borrow">대출하기</a>
+      <a href="#return">반납하기</a>
+      <a href="#list">대출 목록</a>
+    </nav>
+    <div class="rules">
+      <strong>대출 규칙</strong>
+      <p>반납 기한은 빌린 날 + 14일</p>
+      <p>한 사람당 3권까지</p>
+      <p>기한 지난 책이 있으면 대출 불가</p>
+      <p>연체한 일수만큼 대출 정지</p>
+      <p>반납은 빌린 본인만</p>
+    </div>
+  </aside>
 
-  <div class="grid">
-    <section class="card" id="borrow">
-      <h2>대출</h2>
-      <p class="hint">반납 기한은 빌린 날 + 14일입니다.</p>
-      <form id="borrow-form">
-        <label>책 번호<input name="book" list="books" autocapitalize="characters" placeholder="예: B001"></label>
-        <label>며칠째<input name="day" type="number" step="any" inputmode="numeric" placeholder="예: 1"></label>
-        <label class="wide">이름<input name="name" placeholder="예: 김민수"></label>
-        <div class="wide"><button class="btn" disabled>대출하기</button></div>
-      </form>
-      <div class="result" id="borrow-result" role="status"></div>
-    </section>
+  <main>
+    <header class="hero" data-tab="shelf">
+      <div>
+        <h1>도서관 대출</h1>
+        <p class="lede">책 번호와 이름, 그리고 도서관이 문을 연 지 며칠째인지 입력하면 바로 빌리고 반납할 수 있어요.</p>
+        <p class="sub" id="summary">대출 엔진(solution.py)을 불러오는 중…</p>
+      </div>
+      <img class="hero-img" src="assets/hero.jpg" alt="햇살이 드는 작은 도서관 열람실 일러스트">
+    </header>
 
-    <section class="card" id="return">
-      <h2>반납</h2>
-      <p class="hint">빌린 본인 이름으로만 반납됩니다.</p>
-      <form id="return-form">
-        <label>책 번호<input name="book" list="books" autocapitalize="characters" placeholder="예: B001"></label>
-        <label>며칠째<input name="day" type="number" step="any" inputmode="numeric" placeholder="예: 10"></label>
-        <label class="wide">이름<input name="name" placeholder="예: 김민수"></label>
-        <div class="wide"><button class="btn ghost" disabled>반납하기</button></div>
-      </form>
-      <div class="result" id="return-result" role="status"></div>
-    </section>
+    <div class="grid">
+      <div class="stack">
+        <section class="card" id="shelf" data-tab="shelf">
+          <div class="card-head"><h2>서가 현황</h2><p class="hint">책을 누르면 바로 대출하거나 반납할 수 있어요.</p></div>
+          <div class="books" id="books"></div>
+        </section>
+        <section class="card" id="list" data-tab="list">
+          <div class="card-head"><h2>대출 목록</h2><p class="hint">이름을 넣으면 지금 빌린 책이 반납 기한이 빠른 순서로 나옵니다.</p></div>
+          <form id="list-form" class="row">
+            <label>이름<input name="name" placeholder="예: 김민수" autocomplete="off"></label>
+            <div class="act"><button class="btn" disabled>목록 보기</button></div>
+          </form>
+          <div id="list-out"><p class="empty">이름을 넣고 목록 보기를 누르세요.</p></div>
+        </section>
+      </div>
 
-    <section class="card" id="list">
-      <h2>대출 목록</h2>
-      <p class="hint">반납 기한이 빠른 순서로 보여 줍니다.</p>
-      <form id="list-form">
-        <label class="wide">이름<input name="name" placeholder="예: 김민수"></label>
-        <div class="wide"><button class="btn" disabled>목록 보기</button></div>
-      </form>
-      <div id="list-out"></div>
-    </section>
+      <div class="stack">
+        <section class="card" id="borrow" data-tab="borrow">
+          <div class="card-head"><h2>대출하기</h2><p class="hint">며칠째는 1 이상의 정수로 입력합니다.</p></div>
+          <form id="borrow-form" class="fields">
+            <label>책 번호<input name="book" list="book-ids" autocapitalize="characters" autocomplete="off" placeholder="예: B001"></label>
+            <label>이름<input name="name" autocomplete="off" placeholder="예: 김민수"></label>
+            <label>며칠째<input name="day" type="number" step="any" inputmode="numeric" placeholder="예: 1"></label>
+            <div class="wide act"><button class="btn" disabled>대출하기</button></div>
+          </form>
+          <div class="result" id="borrow-result" role="status"></div>
+        </section>
+
+        <section class="card" id="return" data-tab="return">
+          <div class="card-head"><h2>반납하기</h2><p class="hint">빌린 본인 이름으로만 반납됩니다.</p></div>
+          <form id="return-form" class="fields">
+            <label>책 번호<input name="book" list="book-ids" autocapitalize="characters" autocomplete="off" placeholder="예: B001"></label>
+            <label>이름 (빌린 사람)<input name="name" autocomplete="off" placeholder="예: 김민수"></label>
+            <label>며칠째<input name="day" type="number" step="any" inputmode="numeric" placeholder="예: 10"></label>
+            <div class="wide act"><button class="btn" disabled>반납하기</button></div>
+          </form>
+          <div class="result" id="return-result" role="status"></div>
+        </section>
+      </div>
+    </div>
+  </main>
+</div>
+
+<nav class="tabbar" aria-label="화면 전환">
+  <button type="button" data-go="shelf" class="on">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4" width="4.5" height="16" rx="1"/><rect x="9.5" y="4" width="4.5" height="16" rx="1"/><path d="m15.6 5.3 4.3-1.1 3.6 14.4-4.3 1.1z" transform="translate(-1.6 .4)"/></svg>현황</button>
+  <button type="button" data-go="borrow">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 3.5H6a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h7"/><path d="M11 12h10M17.5 8.5 21 12l-3.5 3.5"/></svg>대출</button>
+  <button type="button" data-go="return">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 3.5h7a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2h-7"/><path d="M3 12h11M10.5 8.5 14 12l-3.5 3.5"/></svg>반납</button>
+  <button type="button" data-go="list">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1" fill="currentColor"/><circle cx="4.5" cy="12" r="1" fill="currentColor"/><circle cx="4.5" cy="18" r="1" fill="currentColor"/></svg>목록</button>
+</nav>
+
+<div class="scrim" id="scrim"></div>
+<section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" aria-hidden="true">
+  <div class="grab"></div>
+  <div class="sheet-head">
+    <img id="sheet-img" src="assets/b001.jpg" alt="">
+    <div>
+      <div class="kicker" id="sheet-kicker"></div>
+      <h3 id="sheet-title"></h3>
+      <p class="note" id="sheet-note"></p>
+    </div>
+    <button type="button" class="x" id="sheet-x" aria-label="닫기"><svg width="14" height="14" viewBox="0 0 14 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l10 10M12 2 2 12"/></svg></button>
   </div>
-</main>
-<datalist id="books"><option>B001</option><option>B002</option><option>B003</option><option>B004</option><option>B005</option></datalist>
+  <form id="sheet-form" class="fields">
+    <label>이름<input name="name" autocomplete="off" placeholder="예: 김민수"></label>
+    <label>며칠째<input name="day" type="number" step="any" inputmode="numeric" placeholder="예: 1"></label>
+    <button class="btn" id="sheet-btn"></button>
+  </form>
+  <div class="result" id="sheet-result" role="status"></div>
+</section>
+
+<div class="boot" id="boot" role="status"><span class="spin"></span><span id="boot-text">대출 엔진(solution.py)을 불러오는 중… 잠시만 기다려 주세요</span></div>
+<div class="toast" id="toast" role="status" aria-live="polite"><i>✓</i><div><b id="toast-title"></b><small id="toast-detail"></small></div></div>
+<datalist id="book-ids"><option>B001</option><option>B002</option><option>B003</option><option>B004</option><option>B005</option></datalist>
 
 <script>
 // 화면 표시용 목록일 뿐, 대출 규칙 판단은 모두 solution.py 가 함
-const BOOKS = ["B001", "B002", "B003", "B004", "B005"];
-let py, lib;
+const TITLES = { B001: "초록의 시간", B002: "바다로 가는 길", B003: "언덕 위의 밤", B004: "산책자의 지도", B005: "아침 노트" };
+const BOOKS = Object.keys(TITLES);
+const cover = b => `assets/${b.toLowerCase()}.jpg`;
+let py, lib, loans = {}, sheetBook = null, toastTimer;
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-// 빈 칸은 NaN → Python float 로 넘어가 solution.py 가 거절, 2.5 도 float 로 넘어가 거절
+// 빈 칸은 NaN, 2.5 는 실수 → Python float 로 넘어가 solution.py 가 거절
 const num = v => v.trim() === "" ? NaN : Number(v);
 const read = f => [f.book.value.trim(), f.name.value.trim(), num(f.day.value)];
+const CHEV = `<svg class="chev" width="8" height="14" viewBox="0 0 8 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m1 1 6 6-6 6"/></svg>`;
 
-function render() {
-  // 서가 표시: solution.py 가 기억하는 대출 기록을 그대로 읽어 옴
-  const p = py.runPython("{b: [n, d + 14] for b, (n, d) in lib.loans.items()}"), loans = p.toJs({ dict_converter: Object.fromEntries }); p.destroy();
-  $("#shelf").innerHTML = BOOKS.map(b => loans[b]
-    ? `<div class="book out"><b>${b}</b><small>${esc(loans[b][0])}<br>${loans[b][1]}일째까지</small></div>`
-    : `<div class="book"><b>${b}</b><small>대출 가능</small></div>`).join("");
-  const out = Object.keys(loans).length;
-  $("#summary").innerHTML = `5권 중 <b>${5 - out}권</b> 대출 가능 · 대출 중 <b>${out}권</b>`;
+// ── 결과 문구 (서가 시트와 양식이 같이 씀) ──
+function borrowMsg(ok, book, name, day) {
+  return ok ? ["성공", `${book} · ${name} · ${day}일째 대출 — ${day + 14}일째까지 반납하세요.`]
+            : ["실패", "대출할 수 없습니다. 없는 책, 이미 대출 중, 3권 초과, 기한 지난 책 보유, 대출 정지 기간, 1 이상 정수가 아닌 날짜인지 확인하세요."];
+}
+function returnMsg(late, book, day) {
+  return late > 0 ? [`연체 ${late}일`, `${book} 반납 완료. ${day}–${day + late - 1}일째에는 대출이 정지됩니다.`]
+       : late === 0 ? ["연체 0일", `${book} 반납 완료. 기한 안에 반납했습니다.`]
+       : ["실패", "반납할 수 없습니다. 이 이름으로 빌린 책인지, 날짜가 1 이상 정수이고 빌린 날 이후인지 확인하세요."];
 }
 
-function show(el, ok, title, detail) {
+function show(el, ok, [title, detail]) {
   el.className = "result show " + (ok ? "ok" : "fail");
   el.innerHTML = `<strong>${esc(title)}</strong>${esc(detail)}`;
 }
 
+function toast([title, detail]) {
+  $("#toast-title").textContent = title; $("#toast-detail").textContent = detail;
+  $("#toast").classList.add("on");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => $("#toast").classList.remove("on"), 3200);
+}
+
+// ── 서가 ──
+function renderShelf() {
+  $("#books").innerHTML = BOOKS.map(b => {
+    const l = loans[b];
+    return `<button type="button" class="bk${l ? " out" : ""}" data-book="${b}"${lib ? "" : " disabled"} aria-label="${b} ${TITLES[b]}, ${l ? "대출 중" : "대출 가능"}">
+      <span class="cover"><img src="${cover(b)}" alt=""><span class="tag">${l ? "대출 중" : "대출 가능"}</span></span>
+      <span class="meta"><b>${b}</b><small>${TITLES[b]}</small>
+        <small${l ? ' class="due"' : ""}>${l ? `${esc(l[0])} · ${l[1]}일째까지` : "서가에 있음"}</small></span>${CHEV}
+    </button>`;
+  }).join("");
+  if (!lib) return;
+  const out = Object.keys(loans).length;
+  $("#summary").innerHTML = `대출 가능 <b>${BOOKS.length - out}권</b> · 대출 중 <b>${out}권</b> / ${BOOKS.length}권`;
+}
+
+function refresh() {
+  // solution.py 가 기억하는 대출 기록을 그대로 읽어서 보여 줌
+  const p = py.runPython("{b: [n, d + 14] for b, (n, d) in lib.loans.items()}");
+  loans = p.toJs({ dict_converter: Object.fromEntries }); p.destroy();
+  renderShelf();
+}
+
+// ── 바텀시트: 서가에 있는 책은 대출, 대출 중인 책은 반납 ──
+function openSheet(b) {
+  sheetBook = b;
+  const l = loans[b], f = $("#sheet-form");
+  $("#sheet-img").src = cover(b);
+  $("#sheet-kicker").textContent = `${b} · ${l ? "대출 중" : "대출 가능"}`;
+  $("#sheet-kicker").className = "kicker" + (l ? " out" : "");
+  $("#sheet-title").textContent = TITLES[b];
+  $("#sheet-note").textContent = l ? `${l[0]} 님이 빌린 책 · ${l[1]}일째까지 반납` : "이름과 며칠째만 넣으면 바로 빌릴 수 있어요.";
+  f.name.previousSibling.textContent = l ? "이름 (빌린 사람)" : "이름";
+  $("#sheet-btn").textContent = l ? "반납하기" : "대출하기";
+  f.name.value = "";
+  $("#sheet-result").className = "result";
+  $("#scrim").classList.add("on"); $("#sheet").classList.add("on"); $("#sheet").setAttribute("aria-hidden", "false");
+  setTimeout(() => f.name.focus({ preventScroll: true }), 320);
+}
+function closeSheet() {
+  $("#scrim").classList.remove("on"); $("#sheet").classList.remove("on"); $("#sheet").setAttribute("aria-hidden", "true");
+  document.activeElement.blur();
+}
+
+$("#books").onclick = e => { const bk = e.target.closest(".bk"); if (bk && lib) openSheet(bk.dataset.book); };
+$("#scrim").onclick = closeSheet;
+$("#sheet-x").onclick = closeSheet;
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeSheet(); });
+
+$("#sheet-form").onsubmit = e => {
+  e.preventDefault();
+  const f = e.target, name = f.name.value.trim(), day = num(f.day.value), b = sheetBook;
+  let ok, msg;
+  if (loans[b]) { const late = lib.return_book(b, name, day); ok = late >= 0; msg = returnMsg(late, b, day); }
+  else { ok = lib.borrow(b, name, day); msg = borrowMsg(ok, b, name, day); }
+  if (ok) { closeSheet(); refresh(); toast(msg); return; }
+  show($("#sheet-result"), false, msg);
+  $("#sheet").classList.remove("shake"); void $("#sheet").offsetWidth; $("#sheet").classList.add("shake");
+};
+
+// ── 양식 ──
 $("#borrow-form").onsubmit = e => {
   e.preventDefault();
-  const [book, name, day] = read(e.target);
-  const ok = lib.borrow(book, name, day);
-  show($("#borrow-result"), ok, ok ? "성공" : "실패",
-    ok ? `${book} · ${name} · ${day}일째 대출, ${day + 14}일째까지 반납`
-       : "대출할 수 없습니다. 없는 책, 이미 대출 중, 3권 초과, 기한 지난 책 보유, 대출 정지 기간, 1 이상 정수가 아닌 날짜인지 확인하세요.");
-  render();
+  const [book, name, day] = read(e.target), ok = lib.borrow(book, name, day);
+  show($("#borrow-result"), ok, borrowMsg(ok, book, name, day));
+  refresh();
 };
 
 $("#return-form").onsubmit = e => {
   e.preventDefault();
-  const [book, name, day] = read(e.target);
-  const late = lib.return_book(book, name, day);
-  show($("#return-result"), late >= 0, late >= 0 ? `연체 ${late}일` : "실패",
-    late > 0 ? `${book} 반납 완료. ${day}–${day + late - 1}일째에는 대출이 정지됩니다.`
-    : late === 0 ? `${book} 반납 완료. 기한 안에 반납했습니다.`
-    : "반납할 수 없습니다. 이 이름으로 빌린 책인지, 날짜가 1 이상 정수이고 빌린 날 이후인지 확인하세요.");
-  render();
+  const [book, name, day] = read(e.target), late = lib.return_book(book, name, day);
+  show($("#return-result"), late >= 0, returnMsg(late, book, day));
+  refresh();
 };
 
 $("#list-form").onsubmit = e => {
@@ -198,26 +427,55 @@ $("#list-form").onsubmit = e => {
   const name = e.target.name.value.trim();
   const p = lib.get_loans(name), list = p.toJs(); p.destroy();
   $("#list-out").innerHTML = list.length
-    ? `<table><thead><tr><th>책 번호</th><th class="num">반납 기한</th></tr></thead><tbody>` +
-      list.map(([b, due]) => `<tr><td>${esc(b)}</td><td class="num">${due}일째까지</td></tr>`).join("") + `</tbody></table>`
-    : `<p class="empty">${esc(name || "이 사람")}님이 빌린 책이 없습니다.</p>`;
+    ? `<table><thead><tr><th>책</th><th class="num">반납 기한</th></tr></thead><tbody>` +
+      list.map(([b, due]) => `<tr><td><span class="t">${TITLES[b] ? `<img src="${cover(b)}" alt="">` : ""}<span>${esc(b)}<small>${TITLES[b] || ""}</small></span></span></td><td class="num">${due}일째까지</td></tr>`).join("") +
+      `</tbody></table>`
+    : `<p class="empty">${esc(name || "이 사람")}님이 지금 빌린 책이 없습니다.</p>`;
+  document.activeElement.blur();
 };
+
+// ── 화면 전환: 휴대폰은 아래 탭, 데스크톱은 사이드바 ──
+function setTab(t) {
+  document.querySelectorAll("[data-tab]").forEach(el => el.classList.toggle("on", el.dataset.tab === t));
+  document.querySelectorAll(".tabbar button").forEach(b => b.classList.toggle("on", b.dataset.go === t));
+  window.scrollTo(0, 0);
+}
+$(".tabbar").onclick = e => { const b = e.target.closest("button"); if (b) setTab(b.dataset.go); };
+setTab("shelf");
+
+$(".side-nav").onclick = e => {
+  const a = e.target.closest("a"); if (!a) return;
+  e.preventDefault();
+  document.querySelectorAll(".side-nav a").forEach(x => x.classList.toggle("on", x === a));
+  const card = $(a.getAttribute("href"));
+  card.scrollIntoView({ behavior: "smooth", block: "start" });
+  card.classList.remove("flash"); void card.offsetWidth; card.classList.add("flash");
+  const field = card.querySelector("input");
+  if (field) field.focus({ preventScroll: true });
+};
+
+renderShelf();
 
 (async () => {
   try {
     py = await loadPyodide();
     // 웹에 규칙을 따로 만들지 않고 solution.py 를 그대로 실행
-    py.runPython(await (await fetch("solution.py", { cache: "no-store" })).text());
+    const res = await fetch("solution.py", { cache: "no-store" });
+    if (!res.ok) throw new Error(`solution.py 파일을 찾지 못했어요 (HTTP ${res.status})`);
+    py.runPython(await res.text());
     py.runPython("lib = LibraryLoan()");
     lib = py.globals.get("lib");
     document.querySelectorAll("button[disabled]").forEach(b => b.disabled = false);
-    render();
+    refresh();
+    $("#boot").classList.add("done");
   } catch (err) {
-    const s = $("#summary");
-    s.classList.add("status", "err");
-    s.textContent = location.protocol === "file:"
-      ? "파일로 직접 열면 solution.py 를 불러올 수 없습니다. 배포된 링크로 열어 주세요."
-      : "solution.py 를 불러오지 못했습니다: " + err;
+    const msg = location.protocol === "file:"
+      ? "파일을 직접 열면 solution.py 를 불러올 수 없어요. 배포된 링크(https://…)로 열어 주세요."
+      : "solution.py 를 불러오지 못했어요. 새로고침해 주세요. — " + String(err.message || err).trim().split("\n").pop();
+    console.error(err);
+    document.body.classList.add("broken");
+    $("#boot").classList.add("err"); $("#boot-text").textContent = msg;
+    $("#summary").classList.add("err"); $("#summary").textContent = msg;
   }
 })();
 </script>
